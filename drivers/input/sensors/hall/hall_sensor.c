@@ -14,7 +14,6 @@
 #include <linux/wakelock.h>
 #include <asm/intel-mid.h>
 #include <asm/intel_mid_powerbtn.h>
-#include <linux/switch.h>
 
 #define DRIVER_NAME "hall_sensor"
 //#define DISABLE_POWER_BUTTON
@@ -43,10 +42,6 @@ static struct hall_sensor_str {
  	struct delayed_work hall_sensor_dowork;
 	
 }* hall_sensor_dev;
-
-static struct switch_dev cover_switch = {
-        .name = "smartcover",
-};
 
 static void hall_sensor_shutdown(struct platform_device *pdev);
 int lid_connect(struct input_handler *handler, struct input_dev *dev, const struct input_device_id *id){
@@ -232,7 +227,7 @@ static void lid_report_function(struct work_struct *dat)
 		wake_unlock(&hall_sensor_dev->wake_lock);
  		return;
 	}
-        switch_set_state(&cover_switch, !hall_sensor_dev->status ? 1 : 0);
+
         input_report_switch(hall_sensor_dev->lid_indev, SW_LID, !hall_sensor_dev->status);
         input_sync(hall_sensor_dev->lid_indev);
 #ifdef DISABLE_POWER_BUTTON
@@ -409,14 +404,6 @@ static int __init hall_sensor_init(void)
 
 	queue_delayed_work(hall_sensor_do_wq, &hall_sensor_dev->hall_sensor_dowork, 0);
 	wake_lock_init(&hall_sensor_dev->wake_lock, WAKE_LOCK_SUSPEND, "lid_suspend_blocker");
-
-	if (switch_dev_register(&cover_switch) < 0) {
-		pr_err("fail to register cover switch!\n");
-		return 0;
-	}
-
-	switch_set_state(&cover_switch, !hall_sensor_dev->status ? 0 : 1);
-
 	return 0;
 	
 fail_for_create_input_dev:		
@@ -448,7 +435,6 @@ static void __exit hall_sensor_exit(void)
 	kobject_put(hall_sensor_kobj);
 	platform_driver_unregister(&lid_platform_driver);
 	platform_device_unregister(pdev);
-	switch_dev_unregister(&cover_switch);
 }
 
 
