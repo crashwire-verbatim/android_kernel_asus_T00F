@@ -461,6 +461,7 @@ extern const u8 *tcp_parse_md5sig_option(const struct tcphdr *th);
  */
 
 extern void tcp_v4_send_check(struct sock *sk, struct sk_buff *skb);
+void tcp_v4_mtu_reduced(struct sock *sk);
 extern int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb);
 extern struct sock * tcp_create_openreq_child(struct sock *sk,
 					      struct request_sock *req,
@@ -1029,6 +1030,7 @@ static inline void tcp_prequeue_init(struct tcp_sock *tp)
 }
 
 extern bool tcp_prequeue(struct sock *sk, struct sk_buff *skb);
+int tcp_filter(struct sock *sk, struct sk_buff *skb);
 
 #undef STATE_TRACE
 
@@ -1311,7 +1313,8 @@ struct tcp_fastopen_request {
 	/* Fast Open cookie. Size 0 means a cookie request */
 	struct tcp_fastopen_cookie	cookie;
 	struct msghdr			*data;  /* data in MSG_FASTOPEN */
-	u16				copied;	/* queued in tcp_connect() */
+	size_t				size;
+	int				copied;	/* queued in tcp_connect() */
 };
 void tcp_free_fastopen_req(struct tcp_sock *tp);
 

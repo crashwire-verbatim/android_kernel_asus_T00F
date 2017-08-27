@@ -85,7 +85,7 @@ static struct sk_buff *udp6_ufo_fragment(struct sk_buff *skb,
 
 	/* Check if there is enough headroom to insert fragment header. */
 	tnl_hlen = skb_tnl_header_len(skb);
-	if (skb_headroom(skb) < (tnl_hlen + frag_hdr_sz)) {
+	if (skb_mac_header(skb) < skb->head + tnl_hlen + frag_hdr_sz) {
 		if (gso_pskb_expand_head(skb, tnl_hlen + frag_hdr_sz))
 			goto out;
 	}
@@ -94,6 +94,8 @@ static struct sk_buff *udp6_ufo_fragment(struct sk_buff *skb,
 	 * bytes to insert fragment header.
 	 */
 	unfrag_ip6hlen = ip6_find_1stfragopt(skb, &prevhdr);
+	if (unfrag_ip6hlen < 0)
+		return ERR_PTR(unfrag_ip6hlen);
 	nexthdr = *prevhdr;
 	*prevhdr = NEXTHDR_FRAGMENT;
 	unfrag_len = (skb_network_header(skb) - skb_mac_header(skb)) +
@@ -108,7 +110,7 @@ static struct sk_buff *udp6_ufo_fragment(struct sk_buff *skb,
 	fptr = (struct frag_hdr *)(skb_network_header(skb) + unfrag_ip6hlen);
 	fptr->nexthdr = nexthdr;
 	fptr->reserved = 0;
-	ipv6_select_ident(fptr, (struct rt6_info *)skb_dst(skb));
+	fptr->identification = skb_shinfo(skb)->ip6_frag_id;
 
 	/* Fragment the skb. ipv6 header and the remaining fields of the
 	 * fragment header are updated in ipv6_gso_segment()
